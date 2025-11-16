@@ -3,7 +3,7 @@ if workspace:FindFirstChild("Ignore") then
     workspace.Ignore:Destroy()
 end
 
-local CHECK_INTERVAL = 1.5
+local CHECK_INTERVAL = 0.15
 local MAX_DISTANCE = 15
 local EGG_FOLDER = workspace:WaitForChild("Eggs")
 
