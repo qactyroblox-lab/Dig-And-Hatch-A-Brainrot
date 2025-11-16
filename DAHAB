@@ -1,0 +1,156 @@
+-- Remove Ignore folder if exists
+if workspace:FindFirstChild("Ignore") then
+    workspace.Ignore:Destroy()
+end
+
+local CHECK_INTERVAL = 1.5
+local MAX_DISTANCE = 15
+local EGG_FOLDER = workspace:WaitForChild("Eggs")
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local DigLost = ReplicatedStorage.Remotes:WaitForChild("DigLost")
+local DigFunction = ReplicatedStorage.Remotes:WaitForChild("DigFunction")
+
+local player = Players.LocalPlayer
+
+local ALLOWED_RARITIES = {
+    Common = true,
+    Uncommon = true,
+    Rare = true,
+    Epic = true,
+    Legendary = true
+}
+
+---------------------------------------------------------------------
+-- GUI
+---------------------------------------------------------------------
+
+local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
+ScreenGui.Name = "EggCheckerGUI"
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 170, 0, 50)
+Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Frame.Active = true
+
+local ToggleButton = Instance.new("TextButton", Frame)
+ToggleButton.Size = UDim2.new(1, 0, 1, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+ToggleButton.TextScaled = true
+ToggleButton.Text = "Egg Checker: OFF"
+
+---------------------------------------------------------------------
+-- Dragging
+---------------------------------------------------------------------
+
+local UIS = game:GetService("UserInputService")
+local dragging, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    Frame.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+Frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Frame.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        update(input)
+    end
+end)
+
+---------------------------------------------------------------------
+-- Toggle
+---------------------------------------------------------------------
+
+local enabled = false
+
+ToggleButton.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    ToggleButton.Text = enabled and "Egg Checker: ON" or "Egg Checker: OFF"
+    ToggleButton.BackgroundColor3 = enabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+---------------------------------------------------------------------
+-- MAIN LOOP
+---------------------------------------------------------------------
+
+task.spawn(function()
+    while true do
+        task.wait(CHECK_INTERVAL)
+
+        if enabled then
+
+            ---------------------------------------------------------
+            -- FIRST: RUN YOUR DigFunction CALL
+            ---------------------------------------------------------
+            local args = { "MagmaPlate" }
+            DigFunction:InvokeServer(unpack(args))
+
+
+            ---------------------------------------------------------
+            -- THEN: CHECK FOR EGGS (Common → Legendary)
+            ---------------------------------------------------------
+            local character = player.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+            local foundAllowedEgg = false
+
+            if hrp then
+                for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
+                    if egg:FindFirstChild("Hitbox") then
+                        local eggPos = egg.Hitbox.Position
+                        local distance = (hrp.Position - eggPos).Magnitude
+
+                        if distance <= MAX_DISTANCE then
+                            local rarityFolder = egg.Hitbox:FindFirstChild("EggDisplay") and egg.Hitbox.EggDisplay:FindFirstChild("Rarity")
+
+                            if rarityFolder then
+                                local rarityValue = rarityFolder:GetChildren()[1]
+                                
+                                if rarityValue then
+                                    local rarityName = rarityValue.Name
+
+                                    if ALLOWED_RARITIES[rarityName] then
+                                        foundAllowedEgg = true
+                                        DigLost:FireServer()
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            ----------------------------------------------------------------
+            -- If NO Common → Legendary egg was found, STOP the script
+            ----------------------------------------------------------------
+            if not foundAllowedEgg then
+                enabled = false
+                ToggleButton.Text = "Egg Checker: OFF"
+                ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            end
+        end
+    end
+end)
