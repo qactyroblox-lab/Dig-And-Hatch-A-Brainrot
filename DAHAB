@@ -3,7 +3,7 @@
 --=====================================================
 
 -- COOLDOWNS
-local CHECK_COOLDOWN = 0.05
+local CHECK_COOLDOWN = 0.1
 local DIGLOST_COOLDOWN = 0.05
 local MAX_DISTANCE = 15
 
