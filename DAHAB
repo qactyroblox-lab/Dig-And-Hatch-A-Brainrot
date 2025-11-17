@@ -7,6 +7,9 @@ local CHECK_COOLDOWN = 0.2
 local DIGLOST_COOLDOWN = 0.05
 local MAX_DISTANCE = 15
 
+-- Modify dig spam cooldown to 0.1
+local DIG_COOLDOWN = 0.1
+
 -- SERVICES
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -139,6 +142,7 @@ task.spawn(function()
             pcall(function()
                 DigFunction:InvokeServer("MagmaPlate")
             end)
+            task.wait(DIG_COOLDOWN)
         else
             task.wait(0.05)
         end
