@@ -3,12 +3,12 @@
 --=====================================================
 
 -- COOLDOWNS
-local CHECK_COOLDOWN = 0.5
+local CHECK_COOLDOWN = 0.4
 local DIGLOST_COOLDOWN = 0.1
 local MAX_DISTANCE = 15
 
 -- Modify dig spam cooldown to 0.1
-local DIG_COOLDOWN = 1
+local DIG_COOLDOWN = 0.8
 
 -- SERVICES
 local Players = game:GetService("Players")
