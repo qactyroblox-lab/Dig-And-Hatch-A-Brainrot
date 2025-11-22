@@ -3,7 +3,7 @@
 --=====================================================--
 
 -- COOLDOWNS
-local CHECK_COOLDOWN = 0.4
+local CHECK_COOLDOWN = 0.5
 local DIGLOST_COOLDOWN = 0.1
 local MAX_DISTANCE = 15
 -- Modify dig spam cooldown to 0.1
