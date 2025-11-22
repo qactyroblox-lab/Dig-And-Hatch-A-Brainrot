@@ -4,18 +4,15 @@
 
 -- COOLDOWNS
 local CHECK_COOLDOWN = 0.5
-local DIGLOST_COOLDOWN = 0.1
+local DIGLOST_COOLDOWN = 0.2
 local MAX_DISTANCE = 15
--- Modify dig spam cooldown to 0.1
-local DIG_COOLDOWN = 1
+local DIG_COOLDOWN = 0.1 -- DigFunction cooldown
 
 -- SERVICES
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local player = Players.LocalPlayer
 local EGG_FOLDER = workspace:WaitForChild("Eggs")
-
 local DigFunction = ReplicatedStorage.Remotes:WaitForChild("DigFunction")
 local DigLost = ReplicatedStorage.Remotes:WaitForChild("DigLost")
 
@@ -36,12 +33,12 @@ local CHECKBOX_RARITIES = { "Legendary", "Mythic", "Exotic", "Extravagant", "Sec
 -- TOGGLE
 local enabled = false
 
+
 --=====================================================--
 -- GUI SETUP
 --=====================================================--
 
 local playerGui = player:WaitForChild("PlayerGui")
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "EggCheckerGUI"
 ScreenGui.ResetOnSpawn = false
@@ -53,7 +50,6 @@ Frame.Position = UDim2.new(0.05, 0, 0.25, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 Frame.Active = true
 
--- TOGGLE BUTTON
 local ToggleButton = Instance.new("TextButton", Frame)
 ToggleButton.Size = UDim2.new(1, 0, 0, 40)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -69,7 +65,6 @@ end)
 
 -- CREATE CHECKBOXES
 local Checkboxes = {}
-
 local function createCheckbox(name, yPos)
     local holder = Instance.new("Frame", Frame)
     holder.Size = UDim2.new(1, -10, 0, 25)
@@ -134,16 +129,14 @@ Frame.InputBegan:Connect(function(input)
 end)
 
 Frame.InputChanged:Connect(function(input)
-    if dragging and (
-        input.UserInputType == Enum.UserInputType.MouseMovement or
-        input.UserInputType == Enum.UserInputType.Touch
-    ) then
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         updateDrag(input)
     end
 end)
 
+
 --=====================================================--
--- LOOP 1: DIG SPAM (ONLY WHEN ENABLED)
+-- LOOP 1: DIG SPAM
 --=====================================================--
 
 task.spawn(function()
@@ -159,59 +152,74 @@ task.spawn(function()
     end
 end)
 
+
 --=====================================================--
--- LOOP 2: CHECK RARITY AND FIRE DIGLOST
+-- LOOP 2: CHECK EGGS + DIGLOST (Double Check)
 --=====================================================--
 
 task.spawn(function()
     while true do
         task.wait(CHECK_COOLDOWN)
 
-        if enabled then
-            local character = player.Character
-            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if not enabled then
+            continue
+        end
 
-            if hrp then
-                local found = false
+        local character = player.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
 
-                for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
-                    local hitbox = egg:FindFirstChild("Hitbox")
+        local foundForbidden = false
 
-                    if hitbox then
-                        local dist = (hrp.Position - hitbox.Position).Magnitude
-
-                        if dist <= MAX_DISTANCE then
-                            local rarityFolder = hitbox:FindFirstChild("EggDisplay") and hitbox.EggDisplay:FindFirstChild("Rarity")
-
-                            if rarityFolder then
-                                local rarity = rarityFolder:GetChildren()[1]
-
-                                if rarity then
-                                    if ALLOWED_RARITIES[rarity.Name] then
-                                        -- Skip rarity
-                                        found = false
-                                    else
-                                        -- Found non-skip rarity
-                                        found = true
-                                        enabled = false
-                                        ToggleButton.Text = "Egg: OFF"
-                                        ToggleButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
-                                        break
-                                    end
-                                end
-                            end
+        for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
+            local hitbox = egg:FindFirstChild("Hitbox")
+            if hitbox then
+                local dist = (hrp.Position - hitbox.Position).Magnitude
+                if dist <= MAX_DISTANCE then
+                    local rarityFolder = hitbox:FindFirstChild("EggDisplay") and hitbox.EggDisplay:FindFirstChild("Rarity")
+                    if rarityFolder then
+                        local rarity = rarityFolder:GetChildren()[1]
+                        if rarity and not ALLOWED_RARITIES[rarity.Name] then
+                            -- STOP IMMEDIATELY on forbidden
+                            foundForbidden = true
+                            enabled = false
+                            ToggleButton.Text = "Egg: OFF"
+                            ToggleButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
+                            break
                         end
                     end
                 end
+            end
+        end
 
-                -- Fire DigLost only if skip rarity OR nothing found
-                if not found then
-                    pcall(function()
-                        DigLost:FireServer()
-                    end)
-                    task.wait(DIGLOST_COOLDOWN)
+        if foundForbidden then
+            continue
+        end
+
+        -- DOUBLE CHECK before DigLost
+        local doubleCheckForbidden = false
+        for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
+            local hitbox = egg:FindFirstChild("Hitbox")
+            if hitbox then
+                local dist = (hrp.Position - hitbox.Position).Magnitude
+                if dist <= MAX_DISTANCE then
+                    local rarityFolder = hitbox:FindFirstChild("EggDisplay") and hitbox.EggDisplay:FindFirstChild("Rarity")
+                    if rarityFolder then
+                        local rarity = rarityFolder:GetChildren()[1]
+                        if rarity and not ALLOWED_RARITIES[rarity.Name] then
+                            doubleCheckForbidden = true
+                            break
+                        end
+                    end
                 end
             end
+        end
+
+        if enabled and not doubleCheckForbidden then
+            pcall(function()
+                DigLost:FireServer()
+            end)
+            task.wait(DIGLOST_COOLDOWN)
         end
     end
 end)
