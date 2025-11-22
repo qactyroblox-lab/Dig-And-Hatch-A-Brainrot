@@ -1,13 +1,11 @@
---=====================================================
+--=====================================================--
 -- ULTRA-FAST EGG DIGGER WITH DRAGGABLE GUI AND AUTO-OFF
---=====================================================
+--=====================================================--
 
 -- COOLDOWNS
 local CHECK_COOLDOWN = 0.4
 local DIGLOST_COOLDOWN = 0.1
 local MAX_DISTANCE = 15
-
--- Modify dig spam cooldown to 0.1
 local DIG_COOLDOWN = 0
 
 -- SERVICES
@@ -23,22 +21,22 @@ if workspace:FindFirstChild("Ignore") then
     workspace.Ignore:Destroy()
 end
 
--- ALLOWED RARITIES (skip these)
+-- ALLOWED RARITIES
 local ALLOWED_RARITIES = {
     Common = true, Uncommon = true, Rare = true, Epic = true,
     Legendary = true, Mythic = true, Exotic = true,
     Extravagant = false, Secret = false
 }
+
 local CHECKBOX_RARITIES = { "Legendary", "Mythic", "Exotic", "Extravagant", "Secret" }
 
 -- TOGGLE
 local enabled = false
 
---=====================================================
+--=====================================================--
 -- GUI SETUP
---=====================================================
+--=====================================================--
 local playerGui = player:WaitForChild("PlayerGui")
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "EggCheckerGUI"
 ScreenGui.ResetOnSpawn = false
@@ -99,9 +97,9 @@ for _, rarity in ipairs(CHECKBOX_RARITIES) do
     y += 28
 end
 
---=====================================================
+--=====================================================--
 -- GUI DRAGGING
---=====================================================
+--=====================================================--
 local UIS = game:GetService("UserInputService")
 local dragging = false
 local dragStart, startPos
@@ -119,6 +117,7 @@ Frame.InputBegan:Connect(function(input)
         dragging = true
         dragStart = input.Position
         startPos = Frame.Position
+
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -133,61 +132,57 @@ Frame.InputChanged:Connect(function(input)
     end
 end)
 
---=====================================================
--- LOOP 1: DIG SPAM
---=====================================================
+--=====================================================--
+-- LOOP 1: ALWAYS DIG (EVEN IF EGG OFF)
+--=====================================================--
 task.spawn(function()
     while true do
-        if enabled then
-            pcall(function()
-                DigFunction:InvokeServer("MagmaPlate")
-            end)
-            task.wait(DIG_COOLDOWN)
-        else
-            task.wait(0.05)
-        end
+        pcall(function()
+            DigFunction:InvokeServer("MagmaPlate")
+        end)
+        task.wait(DIG_COOLDOWN)
     end
 end)
 
---=====================================================
+--=====================================================--
 -- LOOP 2: CHECK RARITY AND FIRE DIGLOST
---=====================================================
+--=====================================================--
 task.spawn(function()
     while true do
         task.wait(CHECK_COOLDOWN)
+
         if enabled then
-            local character = player.Character
-            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
             if hrp then
-                local found = false
+                local foundSpecial = false
+
                 for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
                     local hitbox = egg:FindFirstChild("Hitbox")
+
                     if hitbox then
                         local dist = (hrp.Position - hitbox.Position).Magnitude
+
                         if dist <= MAX_DISTANCE then
                             local rarityFolder = hitbox:FindFirstChild("EggDisplay") and hitbox.EggDisplay:FindFirstChild("Rarity")
-                            if rarityFolder then
-                                local rarity = rarityFolder:GetChildren()[1]
-                                if rarity then
-                                    if ALLOWED_RARITIES[rarity.Name] then
-                                        -- Skip rarity, keep running
-                                        found = false
-                                    else
-                                        -- Found non-skip rarity, turn off
-                                        found = true
-                                        enabled = false
-                                        ToggleButton.Text = "Egg: OFF"
-                                        ToggleButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
-                                        break
-                                    end
+
+                            if rarityFolder and rarityFolder:GetChildren()[1] then
+                                local rarity = rarityFolder:GetChildren()[1].Name
+
+                                if not ALLOWED_RARITIES[rarity] then
+                                    foundSpecial = true
+                                    enabled = false
+                                    ToggleButton.Text = "Egg: OFF"
+                                    ToggleButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
+                                    break
                                 end
                             end
                         end
                     end
                 end
 
-                -- Fire DigLost only if skip rarity found
-                if not found then
+                if not foundSpecial then
                     pcall(function()
                         DigLost:FireServer()
                     end)
