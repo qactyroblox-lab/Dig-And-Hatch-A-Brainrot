@@ -1,7 +1,7 @@
 --=====================================================--
 -- ULTRA-FAST EGG DIGGER WITH DRAGGABLE GUI AND AUTO-OFF
 --=====================================================--
-
+game:GetService("Players").LocalPlayer.PlayerGui.MainGui.Frames.NotificationHolder:Destroy()
 -- COOLDOWNS
 local CHECK_COOLDOWN = 0.5
 local DIGLOST_COOLDOWN = 0.2
