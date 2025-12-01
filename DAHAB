@@ -6,7 +6,7 @@ game:GetService("Players").LocalPlayer.PlayerGui.MainGui.Frames.NotificationHold
 local CHECK_COOLDOWN = 0.3
 local DIGLOST_COOLDOWN = 0.3
 local MAX_DISTANCE = 15
-local DIG_COOLDOWN = 0.1 -- DigFunction cooldown
+-- local DIG_COOLDOWN = 0.1 -- DigFunction cooldown (REMOVED)
 
 -- SERVICES
 local Players = game:GetService("Players")
@@ -206,16 +206,15 @@ Frame.InputChanged:Connect(function(input)
 end)
 
 --=====================================================--
--- LOOP 1: DIG SPAM
+-- LOOP 1: CLICK SPAM WHILE EGG IS ON
 --=====================================================--
 
 task.spawn(function()
     while true do
         if enabled then
-            pcall(function()
-                DigFunction:InvokeServer("MossyMire")
-            end)
-            task.wait(DIG_COOLDOWN)
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton1(Vector2.new())
+            task.wait()
         else
             task.wait(0.05)
         end
