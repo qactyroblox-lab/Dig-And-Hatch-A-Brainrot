@@ -206,88 +206,82 @@ Frame.InputChanged:Connect(function(input)
 end)
 
 --=====================================================--
--- LOOP 1: CLICK SPAM WHILE EGG IS ON
+-- MAIN LOOP: CLICK -> CHECK EGGS -> DIGLOST (Do This Sequence)
 --=====================================================--
 
 task.spawn(function()
     while true do
         if enabled then
+            -- Step 1: Click spam
             VirtualUser:CaptureController()
             VirtualUser:ClickButton1(Vector2.new())
-            task.wait()
+            
+            -- Step 2: Wait for check cooldown before checking eggs
+            task.wait(CHECK_COOLDOWN)
+            
+            -- Step 3: Check eggs and handle forbidden rarities
+            local character = player.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            local foundForbidden = false
+            if hrp then
+                for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
+                    local hitbox = egg:FindFirstChild("Hitbox")
+                    if hitbox then
+                        local dist = (hrp.Position - hitbox.Position).Magnitude
+                        if dist <= MAX_DISTANCE then
+                            local rarityFolder = hitbox:FindFirstChild("EggDisplay") and hitbox.EggDisplay:FindFirstChild("Rarity")
+                            if rarityFolder then
+                                local rarity = rarityFolder:GetChildren()[1]
+                                if rarity and not ALLOWED_RARITIES[rarity.Name] then
+                                    foundForbidden = true
+                                    -- Turn OFF
+                                    enabled = false
+                                    ToggleButton.Text = "Egg: OFF"
+                                    ToggleButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            -- Step 4: If no forbidden egg, double check before diglost
+            if enabled and not foundForbidden and hrp then
+                -- Double check forbidden
+                local doubleCheckForbidden = false
+                for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
+                    local hitbox = egg:FindFirstChild("Hitbox")
+                    if hitbox then
+                        local dist = (hrp.Position - hitbox.Position).Magnitude
+                        if dist <= MAX_DISTANCE then
+                            local rarityFolder = hitbox:FindFirstChild("EggDisplay") and hitbox.EggDisplay:FindFirstChild("Rarity")
+                            if rarityFolder then
+                                local rarity = rarityFolder:GetChildren()[1]
+                                if rarity and not ALLOWED_RARITIES[rarity.Name] then
+                                    doubleCheckForbidden = true
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                if not doubleCheckForbidden then
+                    -- Step 5: Fire DigLost
+                    pcall(function()
+                        DigLost:FireServer()
+                    end)
+                    task.wait(DIGLOST_COOLDOWN)
+                else
+                    task.wait(0.05)
+                end
+            else
+                task.wait(0.05)
+            end
+
         else
             task.wait(0.05)
-        end
-    end
-end)
-
---=====================================================--
--- LOOP 2: CHECK EGGS + DIGLOST (Double Check)
---=====================================================--
-
-task.spawn(function()
-    while true do
-        task.wait(CHECK_COOLDOWN)
-
-        if not enabled then
-            continue
-        end
-
-        local character = player.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        if not hrp then continue end
-
-        local foundForbidden = false
-
-        for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
-            local hitbox = egg:FindFirstChild("Hitbox")
-            if hitbox then
-                local dist = (hrp.Position - hitbox.Position).Magnitude
-                if dist <= MAX_DISTANCE then
-                    local rarityFolder = hitbox:FindFirstChild("EggDisplay") and hitbox.EggDisplay:FindFirstChild("Rarity")
-                    if rarityFolder then
-                        local rarity = rarityFolder:GetChildren()[1]
-                        if rarity and not ALLOWED_RARITIES[rarity.Name] then
-                            -- STOP IMMEDIATELY on forbidden
-                            foundForbidden = true
-                            enabled = false
-                            ToggleButton.Text = "Egg: OFF"
-                            ToggleButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
-                            break
-                        end
-                    end
-                end
-            end
-        end
-
-        if foundForbidden then
-            continue
-        end
-
-        -- DOUBLE CHECK before DigLost
-        local doubleCheckForbidden = false
-        for _, egg in ipairs(EGG_FOLDER:GetChildren()) do
-            local hitbox = egg:FindFirstChild("Hitbox")
-            if hitbox then
-                local dist = (hrp.Position - hitbox.Position).Magnitude
-                if dist <= MAX_DISTANCE then
-                    local rarityFolder = hitbox:FindFirstChild("EggDisplay") and hitbox.EggDisplay:FindFirstChild("Rarity")
-                    if rarityFolder then
-                        local rarity = rarityFolder:GetChildren()[1]
-                        if rarity and not ALLOWED_RARITIES[rarity.Name] then
-                            doubleCheckForbidden = true
-                            break
-                        end
-                    end
-                end
-            end
-        end
-
-        if enabled and not doubleCheckForbidden then
-            pcall(function()
-                DigLost:FireServer()
-            end)
-            task.wait(DIGLOST_COOLDOWN)
         end
     end
 end)
