@@ -3,10 +3,10 @@
 --=====================================================--
 game:GetService("Players").LocalPlayer.PlayerGui.MainGui.Frames.NotificationHolder:Destroy()
 -- COOLDOWNS
-local CHECK_COOLDOWN = 0.5
-local DIGLOST_COOLDOWN = 0.2
+local CHECK_COOLDOWN = 0.3
+local DIGLOST_COOLDOWN = 0.3
 local MAX_DISTANCE = 15
-local DIG_COOLDOWN = 0.1 -- DigFunction cooldown
+local DIG_COOLDOWN = 0.15 -- DigFunction cooldown
 
 -- SERVICES
 local Players = game:GetService("Players")
@@ -24,15 +24,14 @@ end
 -- ALLOWED RARITIES (skip these)
 local ALLOWED_RARITIES = {
     Common = true, Uncommon = true, Rare = true, Epic = true,
-    Legendary = true, Mythic = true, Exotic = true,
+    Legendary = true, Mythic = true, Exotic = true, Cosmic = false,
     Extravagant = false, Secret = false
 }
 
-local CHECKBOX_RARITIES = { "Legendary", "Mythic", "Exotic", "Extravagant", "Secret" }
+local CHECKBOX_RARITIES = { "Legendary", "Mythic"," Exotic", "Cosmic", "Extravagant", "Secret" }
 
 -- TOGGLE
 local enabled = false
-
 
 --=====================================================--
 -- GUI SETUP
@@ -61,6 +60,19 @@ ToggleButton.MouseButton1Click:Connect(function()
     enabled = not enabled
     ToggleButton.Text = enabled and "Egg: ON" or "Egg: OFF"
     ToggleButton.BackgroundColor3 = enabled and Color3.fromRGB(0,170,0) or Color3.fromRGB(60,60,60)
+
+    -- Auto equip any shovel when true
+    if enabled then
+        local backpack = player:FindFirstChild("Backpack")
+        if backpack then
+            for _, item in ipairs(backpack:GetChildren()) do
+                if string.find(item.Name:lower(), "Shovel") and item:IsA("Tool") then
+                    item.Parent = player.Character
+                    break -- Equip the first shovel found
+                end
+            end
+        end
+    end
 end)
 
 -- CREATE CHECKBOXES
@@ -99,6 +111,56 @@ for _, rarity in ipairs(CHECKBOX_RARITIES) do
 end
 
 --=====================================================--
+-- SIDE SETTINGS GUI: Change Cooldown Values
+--=====================================================--
+
+local SettingFrame = Instance.new("Frame", ScreenGui)
+SettingFrame.Size = UDim2.new(0, 170, 0, 110)
+SettingFrame.Position = UDim2.new(1, -180, 0.6, 0) -- Anchored to right side
+SettingFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+SettingFrame.BorderSizePixel = 0
+
+local Title = Instance.new("TextLabel", SettingFrame)
+Title.Size = UDim2.new(1, 0, 0, 25)
+Title.BackgroundTransparency = 1
+Title.Text = "Cooldown Settings"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.TextScaled = true
+
+local function makeSetting(labelText, yPos, defaultValue, setValue)
+    local Label = Instance.new("TextLabel", SettingFrame)
+    Label.Size = UDim2.new(0,100,0,25)
+    Label.Position = UDim2.new(0,5,0,yPos)
+    Label.BackgroundTransparency = 1
+    Label.Text = labelText
+    Label.TextColor3 = Color3.new(1,1,1)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextScaled = true
+
+    local Box = Instance.new("TextBox", SettingFrame)
+    Box.Size = UDim2.new(0,50,0,25)
+    Box.Position = UDim2.new(0,115,0,yPos)
+    Box.BackgroundColor3 = Color3.fromRGB(50,50,70)
+    Box.TextColor3 = Color3.new(1,1,1)
+    Box.TextScaled = true
+    Box.Text = tostring(defaultValue)
+    Box.ClearTextOnFocus = true
+    
+    Box.FocusLost:Connect(function()
+        local newValue = tonumber(Box.Text)
+        if newValue and newValue > 0 then
+            setValue(newValue)
+            Box.Text = tostring(newValue)
+        else
+            Box.Text = tostring(defaultValue)
+        end
+    end)
+end
+
+makeSetting("Check Egg", 30, CHECK_COOLDOWN, function(v) CHECK_COOLDOWN = v end)
+makeSetting("Skip", 60, DIGLOST_COOLDOWN, function(v) DIGLOST_COOLDOWN = v end)
+
+--=====================================================--
 -- GUI DRAGGING
 --=====================================================--
 
@@ -134,7 +196,6 @@ Frame.InputChanged:Connect(function(input)
     end
 end)
 
-
 --=====================================================--
 -- LOOP 1: DIG SPAM
 --=====================================================--
@@ -143,7 +204,7 @@ task.spawn(function()
     while true do
         if enabled then
             pcall(function()
-                DigFunction:InvokeServer("MagmaPlate")
+                DigFunction:InvokeServer("MossyMire")
             end)
             task.wait(DIG_COOLDOWN)
         else
@@ -151,7 +212,6 @@ task.spawn(function()
         end
     end
 end)
-
 
 --=====================================================--
 -- LOOP 2: CHECK EGGS + DIGLOST (Double Check)
