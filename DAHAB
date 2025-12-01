@@ -1,4 +1,12 @@
 --=====================================================--
+-- ANTI-AFK FEATURE
+--=====================================================--
+Players.LocalPlayer.Idled:Connect(function()
+    local VirtualUser = game:GetService("VirtualUser")
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+--=====================================================--
 -- ULTRA-FAST EGG DIGGER WITH DRAGGABLE GUI AND AUTO-OFF
 --=====================================================--
 game:GetService("Players").LocalPlayer.PlayerGui.MainGui.Frames.NotificationHolder:Destroy()
