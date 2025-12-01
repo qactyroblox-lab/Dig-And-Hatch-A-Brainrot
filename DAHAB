@@ -6,7 +6,7 @@ game:GetService("Players").LocalPlayer.PlayerGui.MainGui.Frames.NotificationHold
 local CHECK_COOLDOWN = 0.3
 local DIGLOST_COOLDOWN = 0.3
 local MAX_DISTANCE = 15
-local DIG_COOLDOWN = 0.15 -- DigFunction cooldown
+local DIG_COOLDOWN = 0.1 -- DigFunction cooldown
 
 -- SERVICES
 local Players = game:GetService("Players")
