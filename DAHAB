@@ -15,12 +15,12 @@ local player = Players.LocalPlayer
 local EGG_FOLDER = workspace:WaitForChild("Eggs")
 local DigFunction = ReplicatedStorage.Remotes:WaitForChild("DigFunction")
 local DigLost = ReplicatedStorage.Remotes:WaitForChild("DigLost")
-
+local VirtualUser = game:GetService("VirtualUser")
+    
 --=====================================================--
 -- ANTI-AFK FEATURE
 --=====================================================--
 Players.LocalPlayer.Idled:Connect(function()
-    local VirtualUser = game:GetService("VirtualUser")
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
