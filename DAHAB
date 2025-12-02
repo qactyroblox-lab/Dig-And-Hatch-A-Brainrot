@@ -3,8 +3,8 @@
 --=====================================================--
 game:GetService("Players").LocalPlayer.PlayerGui.MainGui.Frames.NotificationHolder:Destroy()
 -- COOLDOWNS
-local CHECK_COOLDOWN = 0.3
-local DIGLOST_COOLDOWN = 0.3
+local CHECK_COOLDOWN = 0.5
+local DIGLOST_COOLDOWN = 0.2
 local MAX_DISTANCE = 15
 -- local DIG_COOLDOWN = 0.1 -- DigFunction cooldown (REMOVED)
 
